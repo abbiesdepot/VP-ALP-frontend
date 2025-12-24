@@ -20,7 +20,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -31,7 +33,9 @@ import com.abbie.alpvp.models.ScheduleActivityModel
 import com.abbie.alpvp.viewmodels.AppViewModelProvider
 import com.abbie.alpvp.viewmodels.DashboardState
 import com.abbie.alpvp.viewmodels.DashboardViewModel
-import java.util.Calendar
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private val AppBgColor = Color(0xFFF5F7F5)
 private val PrimaryGreen = Color(0xFF66A678)
@@ -41,6 +45,7 @@ private val TextSecondary = Color(0xFF757575)
 @Composable
 fun DashboardScreen(
     onNavigateToActivityList: () -> Unit,
+    onNavigateToTaskList: () -> Unit,
     viewModel: DashboardViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val state by viewModel.dashboardState.collectAsState()
@@ -62,7 +67,8 @@ fun DashboardScreen(
         onAddActivity = { icon, start, end, desc ->
             viewModel.addActivity(icon, start, end, desc)
         },
-        onNavigateToManage = onNavigateToActivityList
+        onNavigateToManage = onNavigateToActivityList,
+        onNavigateToTaskManage = onNavigateToTaskList
     )
 }
 
@@ -70,7 +76,8 @@ fun DashboardScreen(
 fun DashboardContent(
     state: DashboardState,
     onAddActivity: (String, String, String, String) -> Unit,
-    onNavigateToManage: () -> Unit
+    onNavigateToManage: () -> Unit,
+    onNavigateToTaskManage: () -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
     var selectedIconName by remember { mutableStateOf("") }
@@ -172,7 +179,7 @@ fun DashboardContent(
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(50))
                         .background(
-                            androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            Brush.horizontalGradient(
                                 colors = listOf(Color(0xFF81C784), PrimaryGreen)
                             )
                         )
@@ -235,6 +242,18 @@ fun DashboardContent(
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
+                )
+
+                //KE TASKLIST SCREEN
+                Text(
+                    text = "Manage",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = PrimaryGreen,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onNavigateToTaskManage() }
+                        .padding(4.dp)
                 )
             }
 
@@ -481,7 +500,7 @@ fun NextScheduleCard(
 fun ActivitySelectorRow(onIconSelected: (String) -> Unit) {
     data class ActivityOption(
         val name: String,
-        val icon: androidx.compose.ui.graphics.vector.ImageVector,
+        val icon: ImageVector,
         val color: Color,
         val bgColor: Color
     )
@@ -564,7 +583,7 @@ fun AddActivityDialog(
         if (endMins <= startMins) {
             errorMessage = "End time must be later than start time!"
         } else {
-            val dateNow = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+            val dateNow = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
             onConfirm("${dateNow}T${startTime}:00.000Z", "${dateNow}T${endTime}:00.000Z", description)
         }
     }

@@ -16,6 +16,7 @@ import com.abbie.alpvp.views.ActivityListScreen
 import com.abbie.alpvp.views.DashboardScreen
 import com.abbie.alpvp.views.LoginScreen
 import com.abbie.alpvp.views.RegisterScreen
+import com.abbie.alpvp.views.TaskListScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,13 +66,22 @@ fun DailyStepApp() {
 
         composable(Screen.Dashboard.route) {
             DashboardScreen(
-                onNavigateToActivityList = { navController.navigate(Screen.ManageActivity.route) }
+                onNavigateToActivityList = { navController.navigate(Screen.ManageActivity.route) },
+                onNavigateToTaskList = {
+                    navController.navigate(Screen.TaskList.route)
+                }
             )
         }
 
         composable(Screen.ManageActivity.route) {
             ActivityListScreen(
                 onNavigateToDashboard = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.TaskList.route) {
+            TaskListScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }
