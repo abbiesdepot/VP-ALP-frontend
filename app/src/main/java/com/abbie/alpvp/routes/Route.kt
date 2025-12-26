@@ -7,4 +7,5 @@ sealed class Screen(val route: String) {
     object ManageActivity : Screen("manage_activity")
 
     object TaskList : Screen("task_list")
+    object Timer : Screen("timer")
 }

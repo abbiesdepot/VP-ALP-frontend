@@ -52,6 +52,7 @@ private val TextSecondary = Color(0xFF757575)
 fun DashboardScreen(
     onNavigateToActivityList: () -> Unit,
     onNavigateToTaskList: () -> Unit,
+    onNavigateToTimer: () -> Unit,
     viewModel: DashboardViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val state by viewModel.dashboardState.collectAsState()
@@ -74,7 +75,8 @@ fun DashboardScreen(
             viewModel.addActivity(icon, start, end, desc)
         },
         onNavigateToManage = onNavigateToActivityList,
-        onNavigateToTaskManage = onNavigateToTaskList
+        onNavigateToTaskManage = onNavigateToTaskList,
+        onNavigateToTimer = onNavigateToTimer
     )
 }
 
@@ -83,7 +85,8 @@ fun DashboardContent(
     state: DashboardState,
     onAddActivity: (String, String, String, String) -> Unit,
     onNavigateToManage: () -> Unit,
-    onNavigateToTaskManage: () -> Unit
+    onNavigateToTaskManage: () -> Unit,
+    onNavigateToTimer: () -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
     var selectedIconName by remember { mutableStateOf("") }
@@ -93,6 +96,7 @@ fun DashboardContent(
         bottomBar = {
             BottomNavBar(onNavigate = { route ->
                 if (route == "manage") onNavigateToManage()
+                else if (route == "timer") onNavigateToTimer()
             })
         }
     ) { padding ->
@@ -715,7 +719,7 @@ fun BottomNavBar(onNavigate: (String) -> Unit) {
         )
         NavigationBarItem(
             selected = false,
-            onClick = { },
+            onClick = { onNavigate("timer") },
             icon = { Icon(Icons.Default.Timer, contentDescription = null) },
             label = { Text("Timer") },
             colors = NavigationBarItemDefaults.colors(selectedIconColor = PrimaryGreen)
