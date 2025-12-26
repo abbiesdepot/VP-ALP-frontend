@@ -17,18 +17,22 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import com.abbie.alpvp.repositories.TaskRepository
+import com.abbie.alpvp.repositories.TaskRepositoryInterface
+import com.abbie.alpvp.services.TaskApiService
 
 interface AppContainerInterface {
     val authenticationRepository: AuthenticationRepositoryInterface
     val userRepository: UserRepositoryInterface
     val scheduleRepository: ScheduleRepositoryInterface
     val scheduleActivityRepository: ScheduleActivityRepositoryInterface
+    val taskRepository: TaskRepositoryInterface
 }
 
 class AppContainer (
     private val dataStore: DataStore<Preferences>
 ): AppContainerInterface {
-    private val backendURL = "http://192.168.18.13:6000/"
+    private val backendURL = "http://10.0.2.2:3000/"
 
     private val authenticationRetrofitService: AuthenticationAPIService by lazy {
         val retrofit = initRetrofit()
@@ -45,6 +49,10 @@ class AppContainer (
         retrofit.create(ScheduleActivityAPIService::class.java)
     }
 
+    private val taskAPIService: TaskApiService by lazy {
+        initRetrofit().create(TaskApiService::class.java)
+    }
+
     override val authenticationRepository: AuthenticationRepositoryInterface by lazy {
         AuthenticationRepository(authenticationRetrofitService)
     }
@@ -59,6 +67,10 @@ class AppContainer (
 
     override val scheduleActivityRepository: ScheduleActivityRepositoryInterface by lazy {
         ScheduleActivityRepository(scheduleActivityAPIService)
+    }
+
+    override val taskRepository: TaskRepositoryInterface by lazy {
+        TaskRepository(taskAPIService)
     }
 
     private fun initRetrofit(): Retrofit {

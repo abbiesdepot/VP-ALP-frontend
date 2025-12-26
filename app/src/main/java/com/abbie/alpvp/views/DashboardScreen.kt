@@ -33,7 +33,13 @@ import com.abbie.alpvp.models.ScheduleActivityModel
 import com.abbie.alpvp.viewmodels.AppViewModelProvider
 import com.abbie.alpvp.viewmodels.DashboardState
 import com.abbie.alpvp.viewmodels.DashboardViewModel
+import com.abbie.alpvp.viewmodels.TaskListViewModel
 import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Date
 import java.util.Locale
 
@@ -259,21 +265,57 @@ fun DashboardContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            TaskItemClean(
-                title = "Read 5 Chapters of The Little Prince",
-                deadline = "26 Nov 2025",
-                color = Color(0xFFEF5350)
-            )
-            TaskItemClean(
-                title = "Study Discrete Mathematics",
-                deadline = "28 Nov 2025",
-                color = Color(0xFF42A5F5)
-            )
-            TaskItemClean(
-                title = "Finish Hackfest Proposal",
-                deadline = "30 Nov 2025",
-                color = Color(0xFFAB47BC)
-            )
+//            TaskItemClean(
+//                title = "Read 5 Chapters of The Little Prince",
+//                deadline = "26 Nov 2025",
+//                color = Color(0xFFEF5350)
+//            )
+//            TaskItemClean(
+//                title = "Study Discrete Mathematics",
+//                deadline = "28 Nov 2025",
+//                color = Color(0xFF42A5F5)
+//            )
+//            TaskItemClean(
+//                title = "Finish Hackfest Proposal",
+//                deadline = "30 Nov 2025",
+//                color = Color(0xFFAB47BC)
+//            )
+
+            val taskListViewModel: TaskListViewModel = viewModel(factory = AppViewModelProvider.Factory)
+            val todoTasks by taskListViewModel.todoTasks.collectAsState()
+
+            LaunchedEffect(Unit) {
+                taskListViewModel.fetchTasks()
+            }
+
+            val tasksToShow = remember(todoTasks) { todoTasks.take(3) }
+            Column {
+                tasksToShow.forEachIndexed { index, task ->
+                    val priorityColor = when (index) {
+                        0 -> Color(0xFFE53935)
+                        1 -> Color(0xFFFF9800)
+                        else -> Color(0xFF66A678)
+                    }
+
+                    TaskItemClean(
+                        task = task,
+                        color = priorityColor,
+                        onToggleComplete = {
+                            taskListViewModel.toggleTaskCompletion(task.id, true)
+                        }
+                    )
+                }
+                if (tasksToShow.isEmpty()) {
+                    Text(
+                        text = "No upcoming tasks",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        modifier = Modifier
+                            .padding(vertical = 8.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(80.dp))
         }
@@ -292,7 +334,11 @@ fun DashboardContent(
 }
 
 @Composable
-fun TaskItemClean(title: String, deadline: String, color: Color) {
+fun TaskItemClean(
+    task: com.abbie.alpvp.models.TaskModel,
+    color: Color,
+    onToggleComplete: () -> Unit
+) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -317,7 +363,7 @@ fun TaskItemClean(title: String, deadline: String, color: Color) {
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = title,
+                    text = task.title,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = TextPrimary
@@ -332,7 +378,7 @@ fun TaskItemClean(title: String, deadline: String, color: Color) {
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = deadline,
+                        text = formatDeadline(task.deadline),
                         style = MaterialTheme.typography.labelMedium,
                         color = TextSecondary
                     )
@@ -341,9 +387,11 @@ fun TaskItemClean(title: String, deadline: String, color: Color) {
 
             Icon(
                 imageVector = Icons.Rounded.CheckCircle,
-                contentDescription = "Done",
-                tint = Color(0xFFE0E0E0),
-                modifier = Modifier.size(24.dp)
+                contentDescription = "Mark as complete",
+                tint = if (task.isCompleted) Color(0xFF66A678) else Color(0xFFE0E0E0),
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable { onToggleComplete() }
             )
         }
     }
@@ -686,4 +734,35 @@ fun formatIsoTime(isoString: String): String {
     return try {
         if (isoString.contains("T")) isoString.split("T")[1].substring(0, 5) else isoString
     } catch (e: Exception) { "" }
+}
+
+private fun formatDeadline(deadline: String?): String {
+    if (deadline.isNullOrBlank()) return "No deadline"
+
+    return try {
+        // parsing as ISO instant
+        val instant = Instant.parse(deadline)
+        val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy")
+            .withLocale(Locale.getDefault())
+            .withZone(ZoneId.systemDefault())
+        formatter.format(instant)
+    } catch (_: DateTimeParseException) {
+        try {
+            // parsing as ISO local date
+            val localDate = LocalDate.parse(deadline, DateTimeFormatter.ISO_LOCAL_DATE)
+            val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy").withLocale(Locale.getDefault())
+            localDate.format(formatter)
+        } catch (_: DateTimeParseException) {
+            try {
+                // parsing as DD-MM-YYYY
+                val pattern = DateTimeFormatter.ofPattern("dd-MM-yyyy")
+                val localDate = LocalDate.parse(deadline, pattern)
+                val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy").withLocale(Locale.getDefault())
+                localDate.format(formatter)
+            } catch (_: Exception) {
+                // fallback to raw string biar ga ngecrash
+                deadline
+            }
+        }
+    }
 }

@@ -6,7 +6,8 @@ data class TaskModel(
     val id: Int,
     val title: String,
     val description: String? = null,
-    val deadline: String, // Format: YYYY-MM-DD or DD-MM-YYYY from backend
+    @SerializedName("deadline")
+    val deadline: String?, // Format: YYYY-MM-DD or DD-MM-YYYY from backend
     @SerializedName("is_completed")
     val isCompleted: Boolean = false,
     @SerializedName("user_id")
@@ -31,18 +32,13 @@ data class UpdateTask(
 )
 
 data class GetAllTasksResponse(
-    val success: Boolean,
-    val message: String,
     val data: List<TaskModel>
 )
 
 data class GetTaskResponse(
-    val success: Boolean,
-    val message: String,
     val data: TaskModel
 )
 
 data class GeneralTaskResponseModel(
-    val success: Boolean,
-    val message: String
+    val data: Map<String, String>
 )

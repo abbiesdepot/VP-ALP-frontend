@@ -1,5 +1,4 @@
 package com.abbie.alpvp.services
-
 import com.abbie.alpvp.models.CreateTask
 import com.abbie.alpvp.models.GeneralTaskResponseModel
 import com.abbie.alpvp.models.GetAllTasksResponse
@@ -13,26 +12,29 @@ import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
+import retrofit2.http.Query
 
-interface TaskAPIService {
-
-    @GET("tasks/user/{userId}")
+interface TaskApiService {
+    @GET("api/task/user/{userId}")
     fun getAllTasks(
         @Header("Authorization") token: String,
-        @Path("userId") userId: Int
+        @Path("userId") userId: Int,
+        @Query("schedule_id") scheduleId: Int? = null
     ): Call<GetAllTasksResponse>
 
-    @POST("tasks")
+    @POST("api/task")
     fun createTask(
         @Header("Authorization") token: String,
         @Body request: CreateTask
     ): Call<GetTaskResponse>
 
-    @PUT("tasks")
-    fun updateTask(@Header("Authorization") token: String, @Body request: UpdateTask
+    @PUT("api/task")
+    fun updateTask(
+        @Header("Authorization") token: String,
+        @Body request: UpdateTask
     ): Call<GetTaskResponse>
 
-    @DELETE("tasks/{id}")
+    @DELETE("api/task/{id}")
     fun deleteTask(
         @Header("Authorization") token: String,
         @Path("id") taskId: Int

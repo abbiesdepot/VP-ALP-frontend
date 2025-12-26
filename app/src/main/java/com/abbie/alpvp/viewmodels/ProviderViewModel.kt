@@ -28,6 +28,12 @@ object AppViewModelProvider {
                 dailyStepApplication().container.userRepository
             )
         }
+        initializer {
+            TaskListViewModel(
+                dailyStepApplication().container.taskRepository,
+                dailyStepApplication().container.userRepository
+            )
+        }
     }
 }
 

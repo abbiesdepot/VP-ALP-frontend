@@ -1,10 +1,11 @@
+package com.abbie.alpvp.views
+
 import android.app.DatePickerDialog
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -18,44 +19,62 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.abbie.alpvp.models.TaskModel
 import com.abbie.alpvp.viewmodels.AppViewModelProvider
 import com.abbie.alpvp.viewmodels.TaskListViewModel
-import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.*
 
 private val AppGreen = Color(0xFF66A678)
 private val AppBackground = Color(0xFFF5F7F5)
-private val CardBackground = Color.White
 private val TextPrimary = Color(0xFF1A1C19)
 private val TextSecondary = Color(0xFF757575)
 private val OrangeAccent = Color(0xFFFF9800)
 
+enum class PriorityLevel {
+    URGENT,      // merah
+    HIGH,        // orange
+    NORMAL,      // green
+    COMPLETED    // gray
+}
+
+private fun getPriorityColor(level: PriorityLevel): Color {
+    return when (level) {
+        PriorityLevel.URGENT -> Color(0xFFE53935)
+        PriorityLevel.HIGH -> Color(0xFFFF9800)
+        PriorityLevel.NORMAL -> Color(0xFF66A678)
+        PriorityLevel.COMPLETED -> Color(0xFFE0E0E0)
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListScreen(
-    userId: Int,
-    token: String,
-    onNavigateToDashboard: () -> Unit,
+    onNavigateBack: () -> Unit,
     viewModel: TaskListViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val todoTasks by viewModel.todoTasks.collectAsState()
+    val finishedTasks by viewModel.finishedTasks.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.errorMessage.collectAsState()
     val context = LocalContext.current
 
     var showAddDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        viewModel.loadTasks(userId, token)
+        viewModel.fetchTasks()
     }
 
-    LaunchedEffect(uiState.error) {
-        uiState.error?.let { error ->
-            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-            viewModel.clearError()
+    LaunchedEffect(error) {
+        error?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -71,7 +90,7 @@ fun TaskListScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateToDashboard) {
+                    IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
@@ -104,10 +123,27 @@ fun TaskListScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Upcoming Deadlines",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                    }
+                }
 
-                if (uiState.upcomingTasks.isEmpty() && !uiState.isLoading) {
+                // empty state
+                if (todoTasks.isEmpty() && !isLoading) {
                     item {
                         Box(
                             modifier = Modifier
@@ -133,22 +169,29 @@ fun TaskListScreen(
                     }
                 }
 
-                items(uiState.upcomingTasks) { task ->
+                // Todo Tasks
+                items(todoTasks.size) { index ->
+                    val task = todoTasks[index]
                     TaskCardItem(
                         task = task,
+                        priorityLevel = when (index) {
+                            0 -> PriorityLevel.URGENT    // 1st task red
+                            1 -> PriorityLevel.HIGH      // 2nd orange
+                            else -> PriorityLevel.NORMAL // others green
+                        },
                         onToggleComplete = {
-                            viewModel.toggleTaskCompletion(task, token, userId)
+                            viewModel.toggleTaskCompletion(task.id, true)
                         },
                         onDelete = {
-                            viewModel.deleteTask(task.id, token, userId)
+                            viewModel.deleteTask(task.id)
                         }
                     )
                 }
 
-                // Completed Tasks Section (if any)
-                if (uiState.completedTasks.isNotEmpty()) {
+                // DONE
+                if (finishedTasks.isNotEmpty()) {
                     item {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Completed Tasks",
                             style = MaterialTheme.typography.titleMedium,
@@ -158,14 +201,16 @@ fun TaskListScreen(
                         )
                     }
 
-                    items(uiState.completedTasks) { task ->
+                    items(finishedTasks.size) { index ->
+                        val task = finishedTasks[index]
                         TaskCardItem(
                             task = task,
+                            priorityLevel = PriorityLevel.COMPLETED,
                             onToggleComplete = {
-                                viewModel.toggleTaskCompletion(task, token, userId)
+                                viewModel.toggleTaskCompletion(task.id, false)
                             },
                             onDelete = {
-                                viewModel.deleteTask(task.id, token, userId)
+                                viewModel.deleteTask(task.id)
                             }
                         )
                     }
@@ -179,14 +224,12 @@ fun TaskListScreen(
         if (showAddDialog) {
             AddTaskDialog(
                 onDismiss = { showAddDialog = false },
-                onConfirm = { title, description, deadline, scheduleId ->
+                onConfirm = { title, desc, deadline, scheduleId ->
                     viewModel.createTask(
                         scheduleId = scheduleId,
                         title = title,
                         deadline = deadline,
-                        description = description,
-                        token = token,
-                        userId = userId
+                        description = desc
                     )
                     showAddDialog = false
                 }
@@ -198,18 +241,11 @@ fun TaskListScreen(
 @Composable
 fun TaskCardItem(
     task: TaskModel,
+    priorityLevel: PriorityLevel,
     onToggleComplete: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val borderColor = when {
-        task.isCompleted -> Color(0xFFE0E0E0)
-        else -> when {
-            task.title.contains("Read", ignoreCase = true) -> Color(0xFFE53935) // Red
-            task.title.contains("Study", ignoreCase = true) -> Color(0xFF1E88E5) // Blue
-            task.title.contains("Finish", ignoreCase = true) -> Color(0xFF8E24AA) // Purple
-            else -> AppGreen
-        }
-    }
+    val borderColor = getPriorityColor(priorityLevel)
 
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -217,12 +253,13 @@ fun TaskCardItem(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 3.dp)
+            .padding(vertical = 4.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // warna left border
             Box(
                 modifier = Modifier
                     .width(4.dp)
@@ -233,12 +270,13 @@ fun TaskCardItem(
 
             Spacer(modifier = Modifier.width(16.dp))
 
+            // content tasknya
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = task.title,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
+                    color = if (task.isCompleted) Color.Gray else TextPrimary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -257,28 +295,29 @@ fun TaskCardItem(
                 }
             }
 
+            // action icons
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // CHECK
+                // checkbox
                 Icon(
-                    imageVector = if (task.isCompleted) Icons.Rounded.CheckCircle else Icons.Rounded.CheckCircle,
-                    contentDescription = "Done",
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = if (task.isCompleted) "Mark as incomplete" else "Mark as complete",
                     tint = if (task.isCompleted) AppGreen else Color(0xFFE0E0E0),
                     modifier = Modifier
                         .size(24.dp)
                         .clickable { onToggleComplete() }
                 )
 
-                // DELETE
+                // delete
                 IconButton(
                     onClick = onDelete,
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.DeleteOutline,
-                        contentDescription = "Delete",
+                        contentDescription = "Delete task",
                         tint = Color(0xFFE53935),
                         modifier = Modifier.size(20.dp)
                     )
@@ -306,7 +345,7 @@ fun AddTaskDialog(
         DatePickerDialog(
             context,
             { _, year, month, day ->
-                // format DD-MM-YYYY match backend
+                // match ke backend formatnya
                 deadline = String.format("%02d-%02d-%04d", day, month + 1, year)
                 errorMessage = null
             },
@@ -393,19 +432,6 @@ fun AddTaskDialog(
                         else "Deadline: $deadline"
                     )
                 }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = scheduleId?.toString() ?: "",
-                    onValueChange = {
-                        scheduleId = it.toIntOrNull()
-                    },
-                    label = { Text("Schedule ID (Optional)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
-                )
             }
         },
         confirmButton = {
@@ -425,34 +451,33 @@ fun AddTaskDialog(
     )
 }
 
-fun formatDeadline(deadline: String): String {
+private fun formatDeadline(deadline: String?): String {
+    if (deadline.isNullOrBlank()) return "No deadline"
+
     return try {
-        // ngehandle DD-MM-YYYY n YYYY-MM-DD formats
-        val outputFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-
-        val date = when {
-            deadline.contains("-") -> {
-                val parts = deadline.split("-")
-                when {
-                    parts[0].length == 4 -> {
-                        // YYYY-MM-DD format
-                        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(deadline)
-                    }
-                    else -> {
-                        // DD-MM-YYYY format
-                        SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).parse(deadline)
-                    }
-                }
+        // parsing as ISO instant
+        val instant = Instant.parse(deadline)
+        val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy")
+            .withLocale(Locale.getDefault())
+            .withZone(ZoneId.systemDefault())
+        formatter.format(instant)
+    } catch (_: DateTimeParseException) {
+        try {
+            // parsing as ISO local date
+            val localDate = LocalDate.parse(deadline, DateTimeFormatter.ISO_LOCAL_DATE)
+            val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy").withLocale(Locale.getDefault())
+            localDate.format(formatter)
+        } catch (_: DateTimeParseException) {
+            try {
+                // parsing as DD-MM-YYYY
+                val pattern = DateTimeFormatter.ofPattern("dd-MM-yyyy")
+                val localDate = LocalDate.parse(deadline, pattern)
+                val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy").withLocale(Locale.getDefault())
+                localDate.format(formatter)
+            } catch (_: Exception) {
+                // biar g ngecrash
+                deadline
             }
-            else -> null
         }
-
-        if (date != null) {
-            outputFormat.format(date)
-        } else {
-            deadline
-        }
-    } catch (e: Exception) {
-        deadline
     }
 }

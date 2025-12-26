@@ -5,12 +5,12 @@ import com.abbie.alpvp.models.GeneralTaskResponseModel
 import com.abbie.alpvp.models.GetAllTasksResponse
 import com.abbie.alpvp.models.GetTaskResponse
 import com.abbie.alpvp.models.UpdateTask
-import com.abbie.alpvp.services.TaskAPIService
+import com.abbie.alpvp.services.TaskApiService
 import retrofit2.Call
 
 
 interface TaskRepositoryInterface {
-    fun getAllTasks(token: String, userId: Int): Call<GetAllTasksResponse>
+    fun getAllTasks(token: String, userId: Int, scheduleId: Int? = null): Call<GetAllTasksResponse>
 
     fun createTask(token: String, request: CreateTask): Call<GetTaskResponse>
 
@@ -20,11 +20,11 @@ interface TaskRepositoryInterface {
 }
 
 class TaskRepository(
-    private val taskAPIService: TaskAPIService
+    private val taskAPIService: TaskApiService
 ): TaskRepositoryInterface {
 
-    override fun getAllTasks(token: String, userId: Int): Call<GetAllTasksResponse> {
-        return taskAPIService.getAllTasks("Bearer $token", userId)
+    override fun getAllTasks(token: String, userId: Int, scheduleId: Int?): Call<GetAllTasksResponse> {
+        return taskAPIService.getAllTasks("Bearer $token", userId, scheduleId)
     }
 
     override fun createTask(token: String, request: CreateTask): Call<GetTaskResponse> {
