@@ -2,12 +2,16 @@ package com.abbie.alpvp.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.abbie.alpvp.models.UserResponse
 import com.abbie.alpvp.repositories.AuthenticationRepositoryInterface
 import com.abbie.alpvp.repositories.UserRepositoryInterface
 import com.abbie.alpvp.utils.JwtUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import retrofit2.Call
 import retrofit2.awaitResponse
 
 class AuthViewModel(
@@ -22,7 +26,8 @@ class AuthViewModel(
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
             try {
-                val response = authRepository.login(email, pass).awaitResponse()
+                val call: Call<UserResponse> = authRepository.login(email, pass)
+                val response =  withContext(Dispatchers.IO) { call.execute() }
                 if (response.isSuccessful && response.body() != null) {
                     val token = response.body()!!.data.token ?: ""
 
@@ -36,7 +41,7 @@ class AuthViewModel(
                         _uiState.value = AuthUiState.Error("Invalid Token")
                     }
                 } else {
-                    _uiState.value = AuthUiState.Error("Login failed")
+                    _uiState.value = AuthUiState.Error("Login failed: ${response.code()} ${response.message()}")
                 }
             } catch (e: Exception) {
                 _uiState.value = AuthUiState.Error(e.message ?: "Unknown error")
@@ -48,7 +53,8 @@ class AuthViewModel(
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
             try {
-                val response = authRepository.register(username, email, pass).awaitResponse()
+                val call: Call<UserResponse> = authRepository.register(username, email, pass)
+                val response = withContext(Dispatchers.IO) { call.execute() }
                 if (response.isSuccessful && response.body() != null) {
                     val token = response.body()!!.data.token ?: ""
 
@@ -62,7 +68,7 @@ class AuthViewModel(
                         _uiState.value = AuthUiState.Error("Invalid Token ID")
                     }
                 } else {
-                    _uiState.value = AuthUiState.Error("Register failed")
+                    _uiState.value = AuthUiState.Error("Register failed: ${response.code()} ${response.message()}")
                 }
             } catch (e: Exception) {
                 _uiState.value = AuthUiState.Error(e.message ?: "Unknown error")
