@@ -70,7 +70,6 @@ fun TimerScreen(
                     }
                 }
                 TimerState.SHORT_BREAK, TimerState.LONG_BREAK -> {
-                    // Break completed, ready for next focus
                     timerState = TimerState.IDLE
                     timeRemaining = focusMinutes * 60
                     totalTime = focusMinutes * 60
