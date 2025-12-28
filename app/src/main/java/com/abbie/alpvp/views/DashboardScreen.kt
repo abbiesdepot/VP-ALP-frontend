@@ -53,6 +53,7 @@ fun DashboardScreen(
     onNavigateToActivityList: () -> Unit,
     onNavigateToTaskList: () -> Unit,
     onNavigateToTimer: () -> Unit,
+    onNavigateToRewards: () -> Unit,
     viewModel: DashboardViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val state by viewModel.dashboardState.collectAsState()
@@ -76,8 +77,9 @@ fun DashboardScreen(
         },
         onNavigateToManage = onNavigateToActivityList,
         onNavigateToTaskManage = onNavigateToTaskList,
-        onNavigateToTimer = onNavigateToTimer
-    )
+        onNavigateToTimer = onNavigateToTimer,
+        onNavigateToRewards = onNavigateToRewards,
+        )
 }
 
 @Composable
@@ -86,7 +88,8 @@ fun DashboardContent(
     onAddActivity: (String, String, String, String) -> Unit,
     onNavigateToManage: () -> Unit,
     onNavigateToTaskManage: () -> Unit,
-    onNavigateToTimer: () -> Unit
+    onNavigateToTimer: () -> Unit,
+    onNavigateToRewards: () -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
     var selectedIconName by remember { mutableStateOf("") }
@@ -97,6 +100,7 @@ fun DashboardContent(
             BottomNavBar(onNavigate = { route ->
                 if (route == "manage") onNavigateToManage()
                 else if (route == "timer") onNavigateToTimer()
+                else if (route == "rewards") onNavigateToRewards()
             })
         }
     ) { padding ->
@@ -726,7 +730,7 @@ fun BottomNavBar(onNavigate: (String) -> Unit) {
         )
         NavigationBarItem(
             selected = false,
-            onClick = {},
+            onClick = { onNavigate("rewards") },
             icon = { Icon(Icons.Default.EmojiEvents, contentDescription = null) },
             label = { Text("Rewards") },
             colors = NavigationBarItemDefaults.colors(selectedIconColor = PrimaryGreen)

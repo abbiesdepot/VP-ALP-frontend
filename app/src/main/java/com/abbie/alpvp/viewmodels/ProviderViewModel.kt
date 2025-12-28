@@ -34,6 +34,14 @@ object AppViewModelProvider {
                 dailyStepApplication().container.userRepository
             )
         }
+
+        initializer {
+            RewardsViewModel(
+                rewardsRepository = dailyStepApplication().container.rewardsRepository,
+                userRepository = dailyStepApplication().container.userRepository
+            )
+        }
+
     }
 }
 
