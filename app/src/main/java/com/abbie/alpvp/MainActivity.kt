@@ -18,6 +18,7 @@ import com.abbie.alpvp.views.LoginScreen
 import com.abbie.alpvp.views.RegisterScreen
 import com.abbie.alpvp.views.TaskListScreen
 import com.abbie.alpvp.views.TimerScreen
+import com.abbie.alpvp.views.PatternGameScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,6 +88,13 @@ fun DailyStepApp() {
 
         composable(Screen.Timer.route) {
             TimerScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToGame = { navController.navigate("game") }
+            )
+        }
+
+        composable("game") {
+            PatternGameScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

@@ -33,6 +33,7 @@ class AppContainer (
     private val dataStore: DataStore<Preferences>
 ): AppContainerInterface {
     private val backendURL = "http://10.0.2.2:3000/"
+    //private val backendURL = "http://192.168.18.13:6000/"
 
     private val authenticationRetrofitService: AuthenticationAPIService by lazy {
         val retrofit = initRetrofit()

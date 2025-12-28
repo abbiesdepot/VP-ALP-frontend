@@ -35,7 +35,8 @@ enum class TimerState {
 @Composable
 fun TimerScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToRewards: () -> Unit = {}
+    onNavigateToRewards: () -> Unit = {},
+    onNavigateToGame: () -> Unit
 ) {
     var timerState by remember { mutableStateOf(TimerState.IDLE) }
     var timeRemaining by remember { mutableStateOf(25 * 60) }
@@ -241,7 +242,16 @@ fun TimerScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            OutlinedButton(
+                onClick = onNavigateToGame,
+                border = androidx.compose.foundation.BorderStroke(1.dp, AppGreen),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("🎮 Play Mini Game (Test)", color = AppGreen)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),

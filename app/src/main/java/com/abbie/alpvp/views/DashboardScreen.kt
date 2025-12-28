@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.abbie.alpvp.models.ScheduleActivityModel
+import com.abbie.alpvp.models.TaskModel
 import com.abbie.alpvp.viewmodels.AppViewModelProvider
 import com.abbie.alpvp.viewmodels.DashboardState
 import com.abbie.alpvp.viewmodels.DashboardViewModel
@@ -43,6 +44,7 @@ import java.time.format.DateTimeParseException
 import java.util.Date
 import java.util.Locale
 
+// --- Color Constants ---
 private val AppBgColor = Color(0xFFF5F7F5)
 private val PrimaryGreen = Color(0xFF66A678)
 private val TextPrimary = Color(0xFF1A1C19)
@@ -58,6 +60,7 @@ fun DashboardScreen(
     val state by viewModel.dashboardState.collectAsState()
     val context = LocalContext.current
 
+    // Handle Toast messages
     LaunchedEffect(state.toastMessage) {
         state.toastMessage?.let { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -65,6 +68,7 @@ fun DashboardScreen(
         }
     }
 
+    // Load Data
     LaunchedEffect(Unit) {
         viewModel.loadDashboardData()
     }
@@ -95,8 +99,8 @@ fun DashboardContent(
         containerColor = AppBgColor,
         bottomBar = {
             BottomNavBar(onNavigate = { route ->
-                if (route == "manage") onNavigateToManage()
-                else if (route == "timer") onNavigateToTimer()
+                if (route == "timer") onNavigateToTimer()
+                // "home" does nothing as we are already here
             })
         }
     ) { padding ->
@@ -107,6 +111,7 @@ fun DashboardContent(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 20.dp)
         ) {
+            // --- Header Section ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -155,6 +160,7 @@ fun DashboardContent(
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            // --- Progress Section ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -205,10 +211,15 @@ fun DashboardContent(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            NextScheduleCard(currentActivity = state.currentActivity, upcomingActivities = state.upcomingActivities)
+            // --- Next Schedule Card ---
+            NextScheduleCard(
+                currentActivity = state.currentActivity,
+                upcomingActivities = state.upcomingActivities
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            // --- Activities Section ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -242,6 +253,7 @@ fun DashboardContent(
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            // --- Upcoming Tasks Section ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -254,7 +266,6 @@ fun DashboardContent(
                     color = TextPrimary
                 )
 
-                //KE TASKLIST SCREEN
                 Text(
                     text = "Manage",
                     style = MaterialTheme.typography.labelLarge,
@@ -269,22 +280,7 @@ fun DashboardContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-//            TaskItemClean(
-//                title = "Read 5 Chapters of The Little Prince",
-//                deadline = "26 Nov 2025",
-//                color = Color(0xFFEF5350)
-//            )
-//            TaskItemClean(
-//                title = "Study Discrete Mathematics",
-//                deadline = "28 Nov 2025",
-//                color = Color(0xFF42A5F5)
-//            )
-//            TaskItemClean(
-//                title = "Finish Hackfest Proposal",
-//                deadline = "30 Nov 2025",
-//                color = Color(0xFFAB47BC)
-//            )
-
+            // Task List ViewModel Integration
             val taskListViewModel: TaskListViewModel = viewModel(factory = AppViewModelProvider.Factory)
             val todoTasks by taskListViewModel.todoTasks.collectAsState()
 
@@ -315,6 +311,7 @@ fun DashboardContent(
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
                         modifier = Modifier
+                            .fillMaxWidth()
                             .padding(vertical = 8.dp),
                         textAlign = TextAlign.Center
                     )
@@ -337,9 +334,11 @@ fun DashboardContent(
     }
 }
 
+// --- COMPONENTS ---
+
 @Composable
 fun TaskItemClean(
-    task: com.abbie.alpvp.models.TaskModel,
+    task: TaskModel,
     color: Color,
     onToggleComplete: () -> Unit
 ) {
@@ -401,19 +400,16 @@ fun TaskItemClean(
     }
 }
 
-
 @Composable
 fun NextScheduleCard(
     currentActivity: ScheduleActivityModel?,
     upcomingActivities: List<ScheduleActivityModel>
 ) {
     val isCurrentActive = currentActivity != null
-
     val displayActivity = if (isCurrentActive) currentActivity!! else upcomingActivities.firstOrNull()
 
     val headerText = if (isCurrentActive) "Happening Now" else "Next on Schedule"
     val headerIcon = if (isCurrentActive) Icons.Default.PlayCircleFilled else Icons.Default.WbSunny
-
     val cardColor = if (isCurrentActive) Color(0xFF558B63) else Color(0xFF66A678)
 
     Card(
@@ -461,7 +457,6 @@ fun NextScheduleCard(
                     color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
-
                 Text(
                     text = if (displayActivity.description.isNotEmpty()) displayActivity.description else "No description",
                     style = MaterialTheme.typography.bodyMedium,
@@ -531,7 +526,6 @@ fun NextScheduleCard(
                         }
                     }
                 }
-
             } else {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(10.dp),
@@ -625,7 +619,9 @@ fun AddActivityDialog(
         val h = if (parts.size > 1) parts[0].toInt() else 8
         val m = if (parts.size > 1) parts[1].toInt() else 0
 
-        TimePickerDialog(context, { _, h, m -> onTimeSelected(String.format("%02d:%02d", h, m)) }, parts[0].toInt(), parts[1].toInt(), true).show()
+        TimePickerDialog(context, { _, hour, minute ->
+            onTimeSelected(String.format("%02d:%02d", hour, minute))
+        }, h, m, true).show()
     }
 
     fun validateAndSubmit() {
@@ -734,6 +730,8 @@ fun BottomNavBar(onNavigate: (String) -> Unit) {
     }
 }
 
+// --- UTILS ---
+
 fun formatIsoTime(isoString: String): String {
     return try {
         if (isoString.contains("T")) isoString.split("T")[1].substring(0, 5) else isoString
@@ -744,7 +742,6 @@ private fun formatDeadline(deadline: String?): String {
     if (deadline.isNullOrBlank()) return "No deadline"
 
     return try {
-        // parsing as ISO instant
         val instant = Instant.parse(deadline)
         val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy")
             .withLocale(Locale.getDefault())
@@ -752,19 +749,16 @@ private fun formatDeadline(deadline: String?): String {
         formatter.format(instant)
     } catch (_: DateTimeParseException) {
         try {
-            // parsing as ISO local date
             val localDate = LocalDate.parse(deadline, DateTimeFormatter.ISO_LOCAL_DATE)
             val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy").withLocale(Locale.getDefault())
             localDate.format(formatter)
         } catch (_: DateTimeParseException) {
             try {
-                // parsing as DD-MM-YYYY
                 val pattern = DateTimeFormatter.ofPattern("dd-MM-yyyy")
                 val localDate = LocalDate.parse(deadline, pattern)
                 val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy").withLocale(Locale.getDefault())
                 localDate.format(formatter)
             } catch (_: Exception) {
-                // fallback to raw string biar ga ngecrash
                 deadline
             }
         }
