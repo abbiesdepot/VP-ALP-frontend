@@ -57,9 +57,11 @@ fun TimerScreen(
             }
         } else if (isRunning && timeRemaining == 0) {
             isRunning = false
+
             when (timerState) {
                 TimerState.FOCUS -> {
                     pomodoroCount++
+
                     if (pomodoroCount % 4 == 0) {
                         timerState = TimerState.LONG_BREAK
                         timeRemaining = longBreakMinutes * 60
@@ -69,7 +71,9 @@ fun TimerScreen(
                         timeRemaining = shortBreakMinutes * 60
                         totalTime = shortBreakMinutes * 60
                     }
+                    onNavigateToGame()
                 }
+
                 TimerState.SHORT_BREAK, TimerState.LONG_BREAK -> {
                     timerState = TimerState.IDLE
                     timeRemaining = focusMinutes * 60
@@ -242,6 +246,7 @@ fun TimerScreen(
                 }
             }
 
+            //testing button
             Spacer(modifier = Modifier.height(24.dp))
             OutlinedButton(
                 onClick = onNavigateToGame,
