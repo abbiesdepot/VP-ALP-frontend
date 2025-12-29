@@ -16,6 +16,7 @@ import com.abbie.alpvp.views.ActivityListScreen
 import com.abbie.alpvp.views.DashboardScreen
 import com.abbie.alpvp.views.LoginScreen
 import com.abbie.alpvp.views.RegisterScreen
+import com.abbie.alpvp.views.RewardScreen
 import com.abbie.alpvp.views.TaskListScreen
 import com.abbie.alpvp.views.TimerScreen
 import com.abbie.alpvp.views.PatternGameScreen
@@ -70,7 +71,8 @@ fun DailyStepApp() {
             DashboardScreen(
                 onNavigateToActivityList = { navController.navigate(Screen.ManageActivity.route) },
                 onNavigateToTaskList = { navController.navigate(Screen.TaskList.route) },
-                onNavigateToTimer = { navController.navigate(Screen.Timer.route) }
+                onNavigateToTimer = { navController.navigate(Screen.Timer.route) },
+                onNavigateToRewards = { navController.navigate(Screen.Rewards.route) },
             )
         }
 
@@ -97,6 +99,10 @@ fun DailyStepApp() {
             PatternGameScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
+        }
+
+        composable(Screen.Rewards.route) {
+            RewardScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }

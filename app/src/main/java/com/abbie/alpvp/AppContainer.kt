@@ -4,6 +4,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.abbie.alpvp.repositories.AuthenticationRepository
 import com.abbie.alpvp.repositories.AuthenticationRepositoryInterface
+import com.abbie.alpvp.repositories.RewardsRepository
+import com.abbie.alpvp.repositories.RewardsRepositoryInterface
 import com.abbie.alpvp.repositories.ScheduleRepository
 import com.abbie.alpvp.repositories.ScheduleRepositoryInterface
 import com.abbie.alpvp.repositories.ScheduleActivityRepository
@@ -19,6 +21,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import com.abbie.alpvp.repositories.TaskRepository
 import com.abbie.alpvp.repositories.TaskRepositoryInterface
+import com.abbie.alpvp.services.RewardsAPIService
 import com.abbie.alpvp.services.TaskApiService
 
 interface AppContainerInterface {
@@ -27,6 +30,7 @@ interface AppContainerInterface {
     val scheduleRepository: ScheduleRepositoryInterface
     val scheduleActivityRepository: ScheduleActivityRepositoryInterface
     val taskRepository: TaskRepositoryInterface
+    val rewardsRepository: RewardsRepositoryInterface
 }
 
 class AppContainer (
@@ -54,6 +58,11 @@ class AppContainer (
         initRetrofit().create(TaskApiService::class.java)
     }
 
+    private val rewardsAPIService: RewardsAPIService by lazy {
+        initRetrofit().create(RewardsAPIService::class.java)
+    }
+
+
     override val authenticationRepository: AuthenticationRepositoryInterface by lazy {
         AuthenticationRepository(authenticationRetrofitService)
     }
@@ -72,6 +81,10 @@ class AppContainer (
 
     override val taskRepository: TaskRepositoryInterface by lazy {
         TaskRepository(taskAPIService)
+    }
+
+    override val rewardsRepository: RewardsRepositoryInterface by lazy {
+        RewardsRepository(rewardsAPIService)
     }
 
     private fun initRetrofit(): Retrofit {
