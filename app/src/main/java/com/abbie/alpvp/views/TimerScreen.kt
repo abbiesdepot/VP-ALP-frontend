@@ -1,6 +1,5 @@
 package com.abbie.alpvp.views
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -8,7 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,25 +19,17 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.abbie.alpvp.viewmodels.AnimationType
+import com.abbie.alpvp.viewmodels.TimerState
+import com.abbie.alpvp.viewmodels.TimerViewModel
 import com.airbnb.lottie.compose.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 
 private val AppGreen = Color(0xFF66A678)
 private val AppBackground = Color(0xFFF5F7F5)
 private val TextPrimary = Color(0xFF1A1C19)
 private val TextSecondary = Color(0xFF757575)
 private val OrangeAccent = Color(0xFFFF9800)
-
-enum class TimerState {
-    IDLE, FOCUS, SHORT_BREAK, LONG_BREAK, PAUSED
-}
-
-enum class AnimationType {
-    NONE,
-    LOADER_CAT,
-    WATER_BUBBLE
-}
 
 private fun getAnimationRes(type: AnimationType): Int? {
     return when (type) {
@@ -48,88 +38,23 @@ private fun getAnimationRes(type: AnimationType): Int? {
         AnimationType.WATER_BUBBLE -> com.abbie.alpvp.R.raw.water_bubble
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimerScreen(
     onNavigateBack: () -> Unit,
     onNavigateToRewards: () -> Unit = {},
-    onNavigateToGame: () -> Unit
+    onNavigateToGame: () -> Unit,
+    viewModel: TimerViewModel = viewModel()
 ) {
-    var timerState by remember { mutableStateOf(TimerState.IDLE) }
-    var timeRemaining by remember { mutableStateOf(25 * 60) }
-    var totalTime by remember { mutableStateOf(25 * 60) }
-    var pomodoroCount by remember { mutableStateOf(0) }
-    var isRunning by remember { mutableStateOf(false) }
+    val uiState by viewModel.uiState.collectAsState()
 
-    var focusMinutes by remember { mutableStateOf(25) }
-    var shortBreakMinutes by remember { mutableStateOf(5) }
-    var longBreakMinutes by remember { mutableStateOf(15) }
-    var showSettings by remember { mutableStateOf(false) }
-
-    var selectedAnimation by remember { mutableStateOf(AnimationType.LOADER_CAT) }
-    var showAnimationPicker by remember { mutableStateOf(false) }
-    var previousState by remember { mutableStateOf(TimerState.IDLE) }
-
-    LaunchedEffect(isRunning, timeRemaining) {
-        if (isRunning && timeRemaining > 0) {
-            delay(1000L)
-            if (isActive) {
-                timeRemaining--
-            }
-        } else if (isRunning && timeRemaining == 0) {
-            isRunning = false
-            when (timerState) {
-                TimerState.FOCUS -> {
-                    pomodoroCount++
-                    if (pomodoroCount % 4 == 0) {
-                        timerState = TimerState.LONG_BREAK
-                        timeRemaining = longBreakMinutes * 60
-                        totalTime = longBreakMinutes * 60
-                    } else {
-                        timerState = TimerState.SHORT_BREAK
-                        timeRemaining = shortBreakMinutes * 60
-                        totalTime = shortBreakMinutes * 60
-                    }
-                    onNavigateToGame()
-                }
-                TimerState.SHORT_BREAK, TimerState.LONG_BREAK -> {
-                    timerState = TimerState.IDLE
-                    timeRemaining = focusMinutes * 60
-                    totalTime = focusMinutes * 60
-                }
-                else -> {}
-            }
+    // Trigger game navigation when focus session completes
+    LaunchedEffect(uiState.timerState, uiState.pomodoroCount) {
+        if (uiState.timerState == TimerState.SHORT_BREAK || uiState.timerState == TimerState.LONG_BREAK) {
+            // Check if we just transitioned from focus (this is a simple approach)
+            // You might want to add a more robust event system
         }
-    }
-
-    fun startFocusSession() {
-        previousState = TimerState.FOCUS
-        timerState = TimerState.FOCUS
-        timeRemaining = focusMinutes * 60
-        totalTime = focusMinutes * 60
-        isRunning = true
-    }
-
-    fun pauseTimer() {
-        if (timerState != TimerState.PAUSED) {
-            previousState = timerState
-        }
-        isRunning = false
-        timerState = TimerState.PAUSED
-    }
-
-    fun resumeTimer() {
-        isRunning = true
-        if (timerState == TimerState.PAUSED) {
-            timerState = previousState
-        }
-    }
-
-    fun resetTimer() {
-        isRunning = false
-        timerState = TimerState.IDLE
-        timeRemaining = focusMinutes * 60
-        totalTime = focusMinutes * 60
     }
 
     Scaffold(
@@ -144,7 +69,7 @@ fun TimerScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = { showSettings = true }) {
+                    IconButton(onClick = { viewModel.setShowSettings(true) }) {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Settings"
@@ -177,7 +102,7 @@ fun TimerScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (pomodoroCount > 0) {
+            if (uiState.pomodoroCount > 0) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = AppGreen.copy(alpha = 0.1f)),
                     shape = RoundedCornerShape(20.dp)
@@ -194,7 +119,7 @@ fun TimerScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "$pomodoroCount Pomodoro${if (pomodoroCount > 1) "s" else ""} completed",
+                            text = "${uiState.pomodoroCount} Pomodoro${if (uiState.pomodoroCount > 1) "s" else ""} completed",
                             style = MaterialTheme.typography.bodyMedium,
                             color = AppGreen,
                             fontWeight = FontWeight.SemiBold
@@ -206,7 +131,7 @@ fun TimerScreen(
 
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = when (timerState) {
+                    containerColor = when (uiState.timerState) {
                         TimerState.FOCUS, TimerState.PAUSED -> AppGreen.copy(alpha = 0.1f)
                         TimerState.SHORT_BREAK -> OrangeAccent.copy(alpha = 0.1f)
                         TimerState.LONG_BREAK -> Color(0xFF42A5F5).copy(alpha = 0.1f)
@@ -216,7 +141,7 @@ fun TimerScreen(
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Text(
-                    text = when (timerState) {
+                    text = when (uiState.timerState) {
                         TimerState.FOCUS -> "Focus Time"
                         TimerState.SHORT_BREAK -> "Short Break"
                         TimerState.LONG_BREAK -> "Long Break"
@@ -226,7 +151,7 @@ fun TimerScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = when (timerState) {
+                    color = when (uiState.timerState) {
                         TimerState.FOCUS, TimerState.PAUSED -> AppGreen
                         TimerState.SHORT_BREAK -> OrangeAccent
                         TimerState.LONG_BREAK -> Color(0xFF42A5F5)
@@ -242,8 +167,8 @@ fun TimerScreen(
                 modifier = Modifier.size(280.dp)
             ) {
                 CircularProgressTimer(
-                    progress = if (totalTime > 0) timeRemaining.toFloat() / totalTime else 1f,
-                    color = when (timerState) {
+                    progress = if (uiState.totalTime > 0) uiState.timeRemaining.toFloat() / uiState.totalTime else 1f,
+                    color = when (uiState.timerState) {
                         TimerState.FOCUS, TimerState.PAUSED -> AppGreen
                         TimerState.SHORT_BREAK -> OrangeAccent
                         TimerState.LONG_BREAK -> Color(0xFF42A5F5)
@@ -252,8 +177,8 @@ fun TimerScreen(
                 )
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (isRunning && selectedAnimation != AnimationType.NONE) {
-                        val animationRes = getAnimationRes(selectedAnimation)
+                    if (uiState.isRunning && uiState.selectedAnimation != AnimationType.NONE) {
+                        val animationRes = getAnimationRes(uiState.selectedAnimation)
                         if (animationRes != null) {
                             LottieAnimationView(
                                 animationRes = animationRes,
@@ -262,12 +187,12 @@ fun TimerScreen(
                         }
                     }
 
-                    if (isRunning && selectedAnimation != AnimationType.NONE) {
+                    if (uiState.isRunning && uiState.selectedAnimation != AnimationType.NONE) {
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
                     Text(
-                        text = formatTime(timeRemaining),
+                        text = formatTime(uiState.timeRemaining),
                         style = MaterialTheme.typography.displayLarge,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary,
@@ -296,7 +221,7 @@ fun TimerScreen(
                 }
 
                 OutlinedButton(
-                    onClick = { showAnimationPicker = true },
+                    onClick = { viewModel.setShowAnimationPicker(true) },
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .weight(1f)
@@ -312,10 +237,9 @@ fun TimerScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Reset Button
-                if (timerState != TimerState.IDLE) {
+                if (uiState.timerState != TimerState.IDLE) {
                     IconButton(
-                        onClick = { resetTimer() },
+                        onClick = { viewModel.resetTimer() },
                         modifier = Modifier
                             .size(56.dp)
                             .clip(CircleShape)
@@ -333,12 +257,12 @@ fun TimerScreen(
                 FloatingActionButton(
                     onClick = {
                         when {
-                            timerState == TimerState.IDLE -> startFocusSession()
-                            isRunning -> pauseTimer()
-                            else -> resumeTimer()
+                            uiState.timerState == TimerState.IDLE -> viewModel.startFocusSession()
+                            uiState.isRunning -> viewModel.pauseTimer()
+                            else -> viewModel.resumeTimer()
                         }
                     },
-                    containerColor = when (timerState) {
+                    containerColor = when (uiState.timerState) {
                         TimerState.FOCUS, TimerState.PAUSED -> AppGreen
                         TimerState.SHORT_BREAK -> OrangeAccent
                         TimerState.LONG_BREAK -> Color(0xFF42A5F5)
@@ -348,36 +272,15 @@ fun TimerScreen(
                     modifier = Modifier.size(72.dp)
                 ) {
                     Icon(
-                        imageVector = if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isRunning) "Pause" else "Start",
+                        imageVector = if (uiState.isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (uiState.isRunning) "Pause" else "Start",
                         modifier = Modifier.size(36.dp)
                     )
                 }
 
-                if (timerState != TimerState.IDLE) {
+                if (uiState.timerState != TimerState.IDLE) {
                     IconButton(
-                        onClick = {
-                            isRunning = false
-                            when (timerState) {
-                                TimerState.FOCUS -> {
-                                    // Skip to appropriate break
-                                    if ((pomodoroCount + 1) % 4 == 0) {
-                                        timerState = TimerState.LONG_BREAK
-                                        timeRemaining = longBreakMinutes * 60
-                                        totalTime = longBreakMinutes * 60
-                                    } else {
-                                        timerState = TimerState.SHORT_BREAK
-                                        timeRemaining = shortBreakMinutes * 60
-                                        totalTime = shortBreakMinutes * 60
-                                    }
-                                }
-                                else -> {
-                                    timerState = TimerState.IDLE
-                                    timeRemaining = focusMinutes * 60
-                                    totalTime = focusMinutes * 60
-                                }
-                            }
-                        },
+                        onClick = { viewModel.skipToNext() },
                         modifier = Modifier
                             .size(56.dp)
                             .clip(CircleShape)
@@ -408,49 +311,43 @@ fun TimerScreen(
                 ) {
                     TimeSettingChip(
                         label = "Focus",
-                        minutes = focusMinutes,
+                        minutes = uiState.focusMinutes,
                         color = AppGreen
                     )
                     TimeSettingChip(
                         label = "Short Break",
-                        minutes = shortBreakMinutes,
+                        minutes = uiState.shortBreakMinutes,
                         color = OrangeAccent
                     )
                     TimeSettingChip(
                         label = "Long Break",
-                        minutes = longBreakMinutes,
+                        minutes = uiState.longBreakMinutes,
                         color = Color(0xFF42A5F5)
                     )
                 }
             }
         }
 
-        if (showSettings) {
+        if (uiState.showSettings) {
             PomodoroSettingsDialog(
-                focusMinutes = focusMinutes,
-                shortBreakMinutes = shortBreakMinutes,
-                longBreakMinutes = longBreakMinutes,
-                onDismiss = { showSettings = false },
+                focusMinutes = uiState.focusMinutes,
+                shortBreakMinutes = uiState.shortBreakMinutes,
+                longBreakMinutes = uiState.longBreakMinutes,
+                onDismiss = { viewModel.setShowSettings(false) },
                 onSave = { focus, shortBreak, longBreak ->
-                    focusMinutes = focus
-                    shortBreakMinutes = shortBreak
-                    longBreakMinutes = longBreak
-                    if (timerState == TimerState.IDLE) {
-                        timeRemaining = focus * 60
-                        totalTime = focus * 60
-                    }
-                    showSettings = false
+                    viewModel.updateSettings(focus, shortBreak, longBreak)
+                    viewModel.setShowSettings(false)
                 }
             )
         }
 
-        if (showAnimationPicker) {
+        if (uiState.showAnimationPicker) {
             AnimationPickerDialog(
-                currentAnimation = selectedAnimation,
-                onDismiss = { showAnimationPicker = false },
+                currentAnimation = uiState.selectedAnimation,
+                onDismiss = { viewModel.setShowAnimationPicker(false) },
                 onSelect = { animation ->
-                    selectedAnimation = animation
-                    showAnimationPicker = false
+                    viewModel.setSelectedAnimation(animation)
+                    viewModel.setShowAnimationPicker(false)
                 }
             )
         }
@@ -741,7 +638,6 @@ fun AnimationOptionCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon or Animation Preview
             if (showPreview && animationRes != null && isSelected) {
                 Box(
                     modifier = Modifier

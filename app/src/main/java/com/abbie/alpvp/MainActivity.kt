@@ -103,7 +103,10 @@ fun DailyStepApp() {
         }
 
         composable(Screen.Rewards.route) {
-            RewardScreen(onNavigateBack = { navController.popBackStack() })
+            RewardScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToTimer = { navController.navigate(Screen.Timer.route) }
+            )
         }
     }
 }
