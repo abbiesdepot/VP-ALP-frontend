@@ -64,4 +64,5 @@ dependencies {
     implementation("com.auth0.android:jwtdecode:2.0.2")
     implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("com.airbnb.android:lottie-compose:6.1.0")
 }

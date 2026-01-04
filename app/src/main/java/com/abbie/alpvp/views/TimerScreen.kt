@@ -1,11 +1,14 @@
 package com.abbie.alpvp.views
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +21,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.airbnb.lottie.compose.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -31,6 +35,19 @@ enum class TimerState {
     IDLE, FOCUS, SHORT_BREAK, LONG_BREAK, PAUSED
 }
 
+enum class AnimationType {
+    NONE,
+    LOADER_CAT,
+    WATER_BUBBLE
+}
+
+private fun getAnimationRes(type: AnimationType): Int? {
+    return when (type) {
+        AnimationType.NONE -> null
+        AnimationType.LOADER_CAT -> com.abbie.alpvp.R.raw.loader_cat
+        AnimationType.WATER_BUBBLE -> com.abbie.alpvp.R.raw.water_bubble
+    }
+}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimerScreen(
@@ -49,6 +66,10 @@ fun TimerScreen(
     var longBreakMinutes by remember { mutableStateOf(15) }
     var showSettings by remember { mutableStateOf(false) }
 
+    var selectedAnimation by remember { mutableStateOf(AnimationType.LOADER_CAT) }
+    var showAnimationPicker by remember { mutableStateOf(false) }
+    var previousState by remember { mutableStateOf(TimerState.IDLE) }
+
     LaunchedEffect(isRunning, timeRemaining) {
         if (isRunning && timeRemaining > 0) {
             delay(1000L)
@@ -57,11 +78,9 @@ fun TimerScreen(
             }
         } else if (isRunning && timeRemaining == 0) {
             isRunning = false
-
             when (timerState) {
                 TimerState.FOCUS -> {
                     pomodoroCount++
-
                     if (pomodoroCount % 4 == 0) {
                         timerState = TimerState.LONG_BREAK
                         timeRemaining = longBreakMinutes * 60
@@ -73,7 +92,6 @@ fun TimerScreen(
                     }
                     onNavigateToGame()
                 }
-
                 TimerState.SHORT_BREAK, TimerState.LONG_BREAK -> {
                     timerState = TimerState.IDLE
                     timeRemaining = focusMinutes * 60
@@ -85,6 +103,7 @@ fun TimerScreen(
     }
 
     fun startFocusSession() {
+        previousState = TimerState.FOCUS
         timerState = TimerState.FOCUS
         timeRemaining = focusMinutes * 60
         totalTime = focusMinutes * 60
@@ -92,6 +111,9 @@ fun TimerScreen(
     }
 
     fun pauseTimer() {
+        if (timerState != TimerState.PAUSED) {
+            previousState = timerState
+        }
         isRunning = false
         timerState = TimerState.PAUSED
     }
@@ -99,13 +121,7 @@ fun TimerScreen(
     fun resumeTimer() {
         isRunning = true
         if (timerState == TimerState.PAUSED) {
-            timerState = if (pomodoroCount % 4 == 0 && timeRemaining < totalTime) {
-                TimerState.LONG_BREAK
-            } else if (timeRemaining < totalTime) {
-                TimerState.FOCUS
-            } else {
-                TimerState.FOCUS
-            }
+            timerState = previousState
         }
     }
 
@@ -236,6 +252,20 @@ fun TimerScreen(
                 )
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (isRunning && selectedAnimation != AnimationType.NONE) {
+                        val animationRes = getAnimationRes(selectedAnimation)
+                        if (animationRes != null) {
+                            LottieAnimationView(
+                                animationRes = animationRes,
+                                modifier = Modifier.size(120.dp)
+                            )
+                        }
+                    }
+
+                    if (isRunning && selectedAnimation != AnimationType.NONE) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
                     Text(
                         text = formatTime(timeRemaining),
                         style = MaterialTheme.typography.displayLarge,
@@ -246,22 +276,43 @@ fun TimerScreen(
                 }
             }
 
-            //testing button
-            Spacer(modifier = Modifier.height(24.dp))
-            OutlinedButton(
-                onClick = onNavigateToGame,
-                border = androidx.compose.foundation.BorderStroke(1.dp, AppGreen),
-                shape = RoundedCornerShape(12.dp)
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("🎮 Play Mini Game (Test)", color = AppGreen)
+                OutlinedButton(
+                    onClick = onNavigateToGame,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, AppGreen),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                ) {
+                    Text("🎮 Play Mini Game", color = AppGreen)
+                }
+
+                OutlinedButton(
+                    onClick = { showAnimationPicker = true },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                ) {
+                    Text("Choose Animation")
+                }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(48.dp))
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Reset Button
                 if (timerState != TimerState.IDLE) {
                     IconButton(
                         onClick = { resetTimer() },
@@ -309,9 +360,16 @@ fun TimerScreen(
                             isRunning = false
                             when (timerState) {
                                 TimerState.FOCUS -> {
-                                    timerState = TimerState.SHORT_BREAK
-                                    timeRemaining = shortBreakMinutes * 60
-                                    totalTime = shortBreakMinutes * 60
+                                    // Skip to appropriate break
+                                    if ((pomodoroCount + 1) % 4 == 0) {
+                                        timerState = TimerState.LONG_BREAK
+                                        timeRemaining = longBreakMinutes * 60
+                                        totalTime = longBreakMinutes * 60
+                                    } else {
+                                        timerState = TimerState.SHORT_BREAK
+                                        timeRemaining = shortBreakMinutes * 60
+                                        totalTime = shortBreakMinutes * 60
+                                    }
                                 }
                                 else -> {
                                     timerState = TimerState.IDLE
@@ -382,6 +440,17 @@ fun TimerScreen(
                         totalTime = focus * 60
                     }
                     showSettings = false
+                }
+            )
+        }
+
+        if (showAnimationPicker) {
+            AnimationPickerDialog(
+                currentAnimation = selectedAnimation,
+                onDismiss = { showAnimationPicker = false },
+                onSelect = { animation ->
+                    selectedAnimation = animation
+                    showAnimationPicker = false
                 }
             )
         }
@@ -563,6 +632,175 @@ private fun formatTime(seconds: Int): String {
 }
 
 @Composable
+fun LottieAnimationView(
+    animationRes: Int,
+    modifier: Modifier = Modifier
+) {
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(animationRes))
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = LottieConstants.IterateForever
+    )
+
+    LottieAnimation(
+        composition = composition,
+        progress = { progress },
+        modifier = modifier
+    )
+}
+
+@Composable
+fun AnimationPickerDialog(
+    currentAnimation: AnimationType,
+    onDismiss: () -> Unit,
+    onSelect: (AnimationType) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.White,
+        title = {
+            Text(
+                "Choose Animation",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Select an animation to display during focus sessions:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                AnimationOptionCard(
+                    title = "No Animation",
+                    description = "Focus without distractions",
+                    isSelected = currentAnimation == AnimationType.NONE,
+                    icon = Icons.Default.Block,
+                    onClick = { onSelect(AnimationType.NONE) }
+                )
+
+                AnimationOptionCard(
+                    title = "Loader Cat",
+                    description = "Cute cat loading animation",
+                    isSelected = currentAnimation == AnimationType.LOADER_CAT,
+                    icon = Icons.Default.Pets,
+                    onClick = { onSelect(AnimationType.LOADER_CAT) },
+                    showPreview = true,
+                    animationRes = com.abbie.alpvp.R.raw.loader_cat
+                )
+
+                AnimationOptionCard(
+                    title = "Water Bubble",
+                    description = "Calming water animation",
+                    isSelected = currentAnimation == AnimationType.WATER_BUBBLE,
+                    icon = Icons.Default.WaterDrop,
+                    onClick = { onSelect(AnimationType.WATER_BUBBLE) },
+                    showPreview = true,
+                    animationRes = com.abbie.alpvp.R.raw.water_bubble
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", color = AppGreen)
+            }
+        }
+    )
+}
+
+@Composable
+fun AnimationOptionCard(
+    title: String,
+    description: String,
+    isSelected: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+    showPreview: Boolean = false,
+    animationRes: Int? = null
+) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) AppGreen.copy(alpha = 0.1f) else Color.White
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 2.dp,
+            color = if (isSelected) AppGreen else Color(0xFFE0E0E0)
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Icon or Animation Preview
+            if (showPreview && animationRes != null && isSelected) {
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFF5F5F5))
+                ) {
+                    LottieAnimationView(
+                        animationRes = animationRes,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isSelected) AppGreen.copy(alpha = 0.2f) else Color(0xFFF5F5F5)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = if (isSelected) AppGreen else Color.Gray,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) AppGreen else TextPrimary
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+            }
+
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "Selected",
+                    tint = AppGreen,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun BottomNavBar(
     currentRoute: String,
     onNavigate: (String) -> Unit
@@ -593,7 +831,7 @@ fun BottomNavBar(
         )
         NavigationBarItem(
             selected = currentRoute == "rewards",
-            onClick = { },
+            onClick = { onNavigate("rewards") },
             icon = { Icon(Icons.Default.EmojiEvents, contentDescription = null) },
             label = { Text("Rewards") },
             colors = NavigationBarItemDefaults.colors(

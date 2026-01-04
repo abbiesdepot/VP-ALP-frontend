@@ -91,6 +91,7 @@ fun DailyStepApp() {
         composable(Screen.Timer.route) {
             TimerScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onNavigateToRewards = { navController.navigate(Screen.Rewards.route) },
                 onNavigateToGame = { navController.navigate("game") }
             )
         }
