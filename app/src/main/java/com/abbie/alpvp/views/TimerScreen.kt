@@ -49,11 +49,10 @@ fun TimerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Trigger game navigation when focus session completes
-    LaunchedEffect(uiState.timerState, uiState.pomodoroCount) {
-        if (uiState.timerState == TimerState.SHORT_BREAK || uiState.timerState == TimerState.LONG_BREAK) {
-            // Check if we just transitioned from focus (this is a simple approach)
-            // You might want to add a more robust event system
+    LaunchedEffect(uiState.shouldNavigateToGame) {
+        if (uiState.shouldNavigateToGame) {
+            onNavigateToGame()
+            viewModel.clearGameNavigation()
         }
     }
 

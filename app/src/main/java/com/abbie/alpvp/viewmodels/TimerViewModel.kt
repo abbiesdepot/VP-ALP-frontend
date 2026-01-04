@@ -33,7 +33,8 @@ data class TimerUiState(
     val selectedAnimation: AnimationType = AnimationType.LOADER_CAT,
     val previousState: TimerState = TimerState.IDLE,
     val showSettings: Boolean = false,
-    val showAnimationPicker: Boolean = false
+    val showAnimationPicker: Boolean = false,
+    val shouldNavigateToGame: Boolean = false
 )
 
 class TimerViewModel : ViewModel() {
@@ -73,7 +74,8 @@ class TimerViewModel : ViewModel() {
                             pomodoroCount = newPomodoroCount,
                             timerState = TimerState.LONG_BREAK,
                             timeRemaining = state.longBreakMinutes * 60,
-                            totalTime = state.longBreakMinutes * 60
+                            totalTime = state.longBreakMinutes * 60,
+                            shouldNavigateToGame = true
                         )
                     } else {
                         state.copy(
@@ -81,7 +83,8 @@ class TimerViewModel : ViewModel() {
                             pomodoroCount = newPomodoroCount,
                             timerState = TimerState.SHORT_BREAK,
                             timeRemaining = state.shortBreakMinutes * 60,
-                            totalTime = state.shortBreakMinutes * 60
+                            totalTime = state.shortBreakMinutes * 60,
+                            shouldNavigateToGame = true
                         )
                     }
                 }
@@ -198,6 +201,10 @@ class TimerViewModel : ViewModel() {
 
     fun setShowAnimationPicker(show: Boolean) {
         _uiState.update { it.copy(showAnimationPicker = show) }
+    }
+
+    fun clearGameNavigation() {
+        _uiState.update { it.copy(shouldNavigateToGame = false) }
     }
 
     override fun onCleared() {
